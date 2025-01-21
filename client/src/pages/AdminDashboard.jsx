@@ -27,7 +27,7 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const res = await fetch(
-        `/api/admin/users?page=${page}&search=${search}&limit=10`
+        `/api/admin/users?page=${page}&search=${search}&limit=5`
       );
       const data = await res.json();
       setUsers(data.users);

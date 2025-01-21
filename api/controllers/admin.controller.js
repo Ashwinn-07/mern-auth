@@ -5,13 +5,18 @@ import bcryptjs from "bcryptjs";
 export const getUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 5;
     const search = req.query.search || "";
 
     const searchQuery = {
-      $or: [
-        { username: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+      $and: [
+        { isAdmin: false },
+        {
+          $or: [
+            { username: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } },
+          ],
+        },
       ],
     };
     const users = await User.find(searchQuery)
