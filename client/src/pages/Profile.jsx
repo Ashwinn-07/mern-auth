@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   updateUserStart,
   updateUserFailure,
@@ -18,12 +20,13 @@ const Profile = () => {
   const [image, setImage] = useState(undefined);
   const [imageError, setImageError] = useState(false);
   const [formData, setFormData] = useState({});
-  const [updateSuccess, setUpdateSuccess] = useState(false);
+
   useEffect(() => {
     if (image) {
       handleFileUpload(image);
     }
   }, [image]);
+
   const handleFileUpload = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -42,10 +45,12 @@ const Profile = () => {
       if (data.secure_url) {
         setFormData((prev) => ({ ...prev, profilePicture: data.secure_url }));
         setImageError(false);
+        toast.success("Profile picture uploaded successfully!");
       }
     } catch (error) {
       console.error(error);
       setImageError(true);
+      toast.error("Failed to upload profile picture");
     }
   };
 
@@ -67,41 +72,121 @@ const Profile = () => {
       const data = await res.json();
       if (data.success === false) {
         dispatch(updateUserFailure(data));
+        toast.error(data.message || "Update failed");
         return;
       }
       dispatch(updateUserSuccess(data));
-      setUpdateSuccess(true);
+      toast.success("Profile updated successfully!");
     } catch (error) {
       dispatch(updateUserFailure(error));
+      toast.error("Failed to update profile");
     }
   };
-  const handleDeleteAccount = async () => {
-    try {
-      dispatch(deleteUserStart());
-      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success === false) {
-        dispatch(deleteUserFailure(data));
-        return;
+
+  const handleDeleteAccount = () => {
+    toast.info(
+      <div>
+        <p>
+          Are you sure you want to delete your account? This action cannot be
+          undone.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss()}
+            className="px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss();
+              try {
+                dispatch(deleteUserStart());
+                const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+                  method: "DELETE",
+                });
+                const data = await res.json();
+                if (data.success === false) {
+                  dispatch(deleteUserFailure(data));
+                  toast.error(data.message || "Failed to delete account");
+                  return;
+                }
+                dispatch(deleteUserSuccess(data));
+                toast.success("Account deleted successfully");
+              } catch (error) {
+                dispatch(deleteUserFailure(error));
+                toast.error("Failed to delete account");
+              }
+            }}
+            className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
       }
-      dispatch(deleteUserSuccess(data));
-    } catch (error) {
-      dispatch(deleteUserFailure(error));
-    }
+    );
   };
-  const handleSignOut = async () => {
-    try {
-      await fetch("/api/auth/signout");
-      dispatch(signOut());
-    } catch (error) {
-      console.log(error);
-    }
+
+  const handleSignOut = () => {
+    toast.info(
+      <div>
+        <p>Are you sure you want to sign out?</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss()}
+            className="px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss();
+              try {
+                await fetch("/api/auth/signout");
+                dispatch(signOut());
+                toast.success("Signed out successfully");
+              } catch (error) {
+                console.log(error);
+                toast.error("Failed to sign out");
+              }
+            }}
+            className="px-3 py-1 bg-slate-700 text-white rounded-md hover:bg-slate-800"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
+      }
+    );
   };
 
   return (
     <div className="p-3 max-w-lg mx-auto">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        theme="colored"
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       <h1 className="text-3xl font-semibold text-center my-7">Profile</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
@@ -142,25 +227,27 @@ const Profile = () => {
           className="bg-slate-100 rounded-lg p-3"
           onChange={handleChange}
         />
-        <button className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80">
+        <button
+          className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80"
+          disabled={loading}
+        >
           {loading ? "Loading..." : "Update"}
         </button>
       </form>
       <div className="flex justify-between mt-5">
         <span
           onClick={handleDeleteAccount}
-          className="text-red-700 cursor-pointer"
+          className="text-red-700 cursor-pointer hover:underline"
         >
           Delete Account
         </span>
-        <span onClick={handleSignOut} className="text-red-700 cursor-pointer">
+        <span
+          onClick={handleSignOut}
+          className="text-red-700 cursor-pointer hover:underline"
+        >
           Sign out
         </span>
       </div>
-      <p className="text-red-700 mt-5">{error && "Something went wrong!"}</p>
-      <p className="text-green-700 mt-5">
-        {updateSuccess && "User updated successfully!"}
-      </p>
     </div>
   );
 };

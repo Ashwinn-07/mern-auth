@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const AdminDashboard = () => {
   const { currentUser } = useSelector((state) => state.user);
@@ -17,12 +19,14 @@ const AdminDashboard = () => {
     password: "",
   });
   const [editingUser, setEditingUser] = useState(null);
+
   useEffect(() => {
     if (!currentUser?.isAdmin) {
       navigate("/sign-in");
     }
     fetchUsers();
   }, [page, search]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -36,8 +40,10 @@ const AdminDashboard = () => {
     } catch (error) {
       setError("failed to fetch users");
       setLoading(false);
+      toast.error("Failed to fetch users");
     }
   };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
@@ -51,6 +57,7 @@ const AdminDashboard = () => {
       const data = await res.json();
       if (data.success === false) {
         setError(data.message);
+        toast.error(data.message);
         return;
       }
       setUsers([data, ...users]);
@@ -59,10 +66,13 @@ const AdminDashboard = () => {
         email: "",
         password: "",
       });
+      toast.success("User created successfully!");
     } catch (error) {
       setError("Failed to create user");
+      toast.error("Failed to create user");
     }
   };
+
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     try {
@@ -76,6 +86,7 @@ const AdminDashboard = () => {
       const data = await res.json();
       if (data.success === false) {
         setError(data.message);
+        toast.error(data.message);
         return;
       }
       setUsers(
@@ -87,27 +98,74 @@ const AdminDashboard = () => {
         email: "",
         password: "",
       });
+      toast.success("User updated successfully!");
     } catch (error) {
       setError("Failed to update user");
+      toast.error("Failed to update user");
     }
   };
-  const handleDeleteUser = async (userId) => {
-    try {
-      const res = await fetch(`/api/admin/user/delete/${userId}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success === false) {
-        setError(data.message);
-        return;
+
+  const handleDeleteUser = async (userId, username) => {
+    toast.info(
+      <div>
+        <p>Are you sure you want to delete this user?</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => toast.dismiss()}
+            className="px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss();
+              try {
+                const res = await fetch(`/api/admin/user/delete/${userId}`, {
+                  method: "DELETE",
+                });
+                const data = await res.json();
+                if (data.success === false) {
+                  setError(data.message);
+                  toast.error(data.message);
+                  return;
+                }
+                setUsers(users.filter((user) => user._id !== userId));
+                toast.success("User deleted successfully!");
+              } catch (error) {
+                setError("Failed to delete user");
+                toast.error("Failed to delete user");
+              }
+            }}
+            className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>,
+      {
+        position: "top-center",
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+        closeButton: false,
       }
-      setUsers(users.filter((user) => user._id !== userId));
-    } catch (error) {
-      setError("Failed to delete user");
-    }
+    );
   };
+
   return (
     <div className="p-4 max-w-4xl mx-auto">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        theme="colored"
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       <h1 className="text-3xl font-semibold mb-4">Admin Dashboard</h1>
 
       <div className="mb-4">
@@ -200,7 +258,6 @@ const AdminDashboard = () => {
                 <tr key={user._id} className="border-b">
                   <td className="p-2">{user.username}</td>
                   <td className="p-2">{user.email}</td>
-
                   <td className="p-2">
                     <button
                       onClick={() => {
@@ -216,7 +273,7 @@ const AdminDashboard = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteUser(user._id)}
+                      onClick={() => handleDeleteUser(user._id, user.username)}
                       className="bg-red-500 text-white px-2 py-1 rounded"
                     >
                       Delete
