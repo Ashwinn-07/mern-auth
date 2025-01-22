@@ -1,38 +1,86 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const SignUp = () => {
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleCHange = (e) => {
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const validateForm = () => {
+    if (!formData.username || !formData.email || !formData.password) {
+      toast.error("Please fill in all fields");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return false;
+    }
+    if (formData.username.length < 3) {
+      toast.error("Username must be at least 3 characters long");
+      return false;
+    }
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(formData.username)) {
+      toast.error(
+        "Username can only contain letters, numbers, and underscores"
+      );
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(false);
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
-          "content-type": "application/json",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
+
       const data = await res.json();
       setLoading(false);
+
       if (data.success === false) {
         setError(true);
+        toast.error(data.message || "Something went wrong!");
         return;
       }
+
+      toast.success("Account created successfully!");
       navigate("/sign-in");
     } catch (error) {
       setLoading(false);
       setError(true);
+      toast.error(error.message || "Something went wrong!");
     }
   };
 
@@ -45,21 +93,24 @@ const SignUp = () => {
           placeholder="Username"
           id="username"
           className="bg-slate-100 p-3 rounded-lg"
-          onChange={handleCHange}
+          onChange={handleChange}
+          value={formData.username}
         />
         <input
           type="email"
           placeholder="Email"
           id="email"
           className="bg-slate-100 p-3 rounded-lg"
-          onChange={handleCHange}
+          onChange={handleChange}
+          value={formData.email}
         />
         <input
           type="password"
           placeholder="Password"
           id="password"
           className="bg-slate-100 p-3 rounded-lg"
-          onChange={handleCHange}
+          onChange={handleChange}
+          value={formData.password}
         />
         <button
           disabled={loading}
@@ -74,7 +125,8 @@ const SignUp = () => {
           <span className="text-blue-500">Sign in</span>
         </Link>
       </div>
-      <p className="text-red-700 mt-5">{error && "Something went wrong"}</p>
+      {error && <p className="text-red-700 mt-5">Something went wrong</p>}
+      <ToastContainer position="top-right" />
     </div>
   );
 };
