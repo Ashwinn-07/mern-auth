@@ -46,6 +46,16 @@ const AdminDashboard = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    if (!formData.username || !formData.email || !formData.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     try {
       const res = await fetch("/api/admin/user/create", {
         method: "POST",
@@ -56,8 +66,19 @@ const AdminDashboard = () => {
       });
       const data = await res.json();
       if (data.success === false) {
-        setError(data.message);
-        toast.error(data.message);
+        if (data.message.includes("validation failed")) {
+          const errors = [];
+          if (data.message.includes("username"))
+            errors.push("Username is required");
+          if (data.message.includes("email"))
+            errors.push("Valid email is required");
+          if (data.message.includes("password"))
+            errors.push("Password is required");
+
+          toast.error(errors.join(", "));
+        } else {
+          toast.error(data.message || "Failed to create user");
+        }
         return;
       }
       setUsers([data, ...users]);
@@ -75,6 +96,16 @@ const AdminDashboard = () => {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
+    if (!formData.username || !formData.email) {
+      toast.error("Username and email are required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/user/update/${editingUser._id}`, {
         method: "PUT",
@@ -85,8 +116,17 @@ const AdminDashboard = () => {
       });
       const data = await res.json();
       if (data.success === false) {
-        setError(data.message);
-        toast.error(data.message);
+        if (data.message.includes("validation failed")) {
+          const errors = [];
+          if (data.message.includes("username"))
+            errors.push("Username is required");
+          if (data.message.includes("email"))
+            errors.push("Valid email is required");
+
+          toast.error(errors.join(", "));
+        } else {
+          toast.error(data.message || "Failed to update user");
+        }
         return;
       }
       setUsers(
